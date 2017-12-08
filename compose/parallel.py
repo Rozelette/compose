@@ -20,6 +20,7 @@ from compose.errors import NoHealthCheckConfigured
 from compose.errors import OperationFailedError
 from compose.utils import get_output_stream
 from compose.config.environment import Environment
+from compose.const import PARALLEL_LIMIT
 
 
 log = logging.getLogger(__name__)
@@ -317,5 +318,5 @@ def get_configured_limit():
     if limit:
         limit = int(limit)
     else:
-        limit = 64
+        limit = PARALLEL_LIMIT
     return limit
