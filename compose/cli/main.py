@@ -363,18 +363,25 @@ class TopLevelCommand(object):
         Usage: down [options]
 
         Options:
-            --rmi type          Remove images. Type must be one of:
-                                'all': Remove all images used by any service.
-                                'local': Remove only images that don't have a custom tag
-                                set by the `image` field.
-            -v, --volumes       Remove named volumes declared in the `volumes` section
-                                of the Compose file and anonymous volumes
-                                attached to containers.
-            --remove-orphans    Remove containers for services not defined in the
-                                Compose file
+            --rmi type            Remove images. Type must be one of:
+                                  'all': Remove all images used by any service.
+                                  'local': Remove only images that don't have a custom tag
+                                  set by the `image` field.
+            -v, --volumes         Remove named volumes declared in the `volumes` section
+                                  of the Compose file and anonymous volumes
+                                  attached to containers.
+            --remove-orphans      Remove containers for services not defined in the
+                                  Compose file
+            --parallel-limit LIM
         """
         image_type = image_type_from_opt('--rmi', options['--rmi'])
-        self.project.down(image_type, options['--volumes'], options['--remove-orphans'])
+        try:
+            limit = int(options['--parallel-limit'])
+        except ValueError:
+            raise UserError('Value for parallel-limit is not a positive integer')
+        if limit < 1:
+            raise UserError('Value for parallel-limit is not a positive integer')
+        self.project.down(image_type, options['--volumes'], options['--remove-orphans'], limit)
 
     def events(self, options):
         """

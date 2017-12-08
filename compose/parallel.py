@@ -33,6 +33,7 @@ def parallel_execute(objects, func, get_name, msg, get_deps=None, limit=None, pa
     get_deps called on object must return a collection with its dependencies.
     get_name called on object must return its name.
     """
+    print("parallel " + str(limit))
     objects = list(objects)
     stream = get_output_stream(sys.stderr)
 
@@ -281,27 +282,28 @@ class ParallelStreamWriter(object):
             self._write_ansi(obj_index, color_func(status))
 
 
-def parallel_operation(containers, operation, options, message):
+def parallel_operation(containers, operation, options, message, limit=None):
     parallel_execute(
         containers,
         operator.methodcaller(operation, **options),
         operator.attrgetter('name'),
         message,
+        limit=limit
     )
 
 
-def parallel_remove(containers, options):
+def parallel_remove(containers, options, limit=None):
     stopped_containers = [c for c in containers if not c.is_running]
-    parallel_operation(stopped_containers, 'remove', options, 'Removing')
+    parallel_operation(stopped_containers, 'remove', options, 'Removing', limit)
 
 
-def parallel_pause(containers, options):
-    parallel_operation(containers, 'pause', options, 'Pausing')
+def parallel_pause(containers, options, limit=None):
+    parallel_operation(containers, 'pause', options, 'Pausing', limit)
 
 
-def parallel_unpause(containers, options):
-    parallel_operation(containers, 'unpause', options, 'Unpausing')
+def parallel_unpause(containers, options, limit=None):
+    parallel_operation(containers, 'unpause', options, 'Unpausing', limit)
 
 
-def parallel_kill(containers, options):
-    parallel_operation(containers, 'kill', options, 'Killing')
+def parallel_kill(containers, options, limit=None):
+    parallel_operation(containers, 'kill', options, 'Killing', limit)

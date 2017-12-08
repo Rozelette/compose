@@ -295,7 +295,7 @@ class Project(object):
 
         return containers
 
-    def stop(self, service_names=None, one_off=OneOffFilter.exclude, **options):
+    def stop(self, service_names=None, one_off=OneOffFilter.exclude, parallel_limit=None, **options):
         containers = self.containers(service_names, one_off=one_off)
 
         def get_deps(container):
@@ -310,6 +310,7 @@ class Project(object):
             operator.attrgetter('name'),
             'Stopping',
             get_deps,
+            limit=parallel_limit,
         )
 
     def pause(self, service_names=None, **options):
@@ -325,15 +326,17 @@ class Project(object):
     def kill(self, service_names=None, **options):
         parallel.parallel_kill(self.containers(service_names), options)
 
-    def remove_stopped(self, service_names=None, one_off=OneOffFilter.exclude, **options):
-        parallel.parallel_remove(self.containers(
-            service_names, stopped=True, one_off=one_off
-        ), options)
+    def remove_stopped(self, service_names=None, one_off=OneOffFilter.exclude, parallel_limit=None, **options):
+        parallel.parallel_remove(
+            self.containers(service_names, stopped=True, one_off=one_off),
+            options,
+            limit=parallel_limit,
+        )
 
-    def down(self, remove_image_type, include_volumes, remove_orphans=False):
-        self.stop(one_off=OneOffFilter.include)
+    def down(self, remove_image_type, include_volumes, remove_orphans=False, parallel_limit=None):
+        self.stop(one_off=OneOffFilter.include, parallel_limit=parallel_limit)
         self.find_orphan_containers(remove_orphans)
-        self.remove_stopped(v=include_volumes, one_off=OneOffFilter.include)
+        self.remove_stopped(v=include_volumes, one_off=OneOffFilter.include, parallel_limit=parallel_limit)
 
         self.networks.remove()
 
