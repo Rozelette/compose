@@ -15,12 +15,12 @@ from six.moves.queue import Queue
 from compose.cli.colors import green
 from compose.cli.colors import red
 from compose.cli.signals import ShutdownException
+from compose.config.environment import Environment
+from compose.const import PARALLEL_LIMIT
 from compose.errors import HealthCheckFailed
 from compose.errors import NoHealthCheckConfigured
 from compose.errors import OperationFailedError
 from compose.utils import get_output_stream
-from compose.config.environment import Environment
-from compose.const import PARALLEL_LIMIT
 
 
 log = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ def parallel_execute(objects, func, get_name, msg, get_deps=None, limit=None, pa
     get_deps called on object must return a collection with its dependencies.
     get_name called on object must return its name.
     """
-    limit=None
+    limit = get_configured_limit() if limit is None else limit
     objects = list(objects)
     stream = get_output_stream(sys.stderr)
 
@@ -54,8 +54,6 @@ def parallel_execute(objects, func, get_name, msg, get_deps=None, limit=None, pa
     for obj in objects:
         writer.write_initial(get_name(obj))
 
-    if limit is None:
-        limit = get_configured_limit()
     print("parallel " + str(limit))
 
     events = parallel_execute_iter(objects, func, get_deps, limit)
@@ -313,8 +311,9 @@ def parallel_unpause(containers, options):
 def parallel_kill(containers, options):
     parallel_operation(containers, 'kill', options, 'Killing')
 
+
 def get_configured_limit():
-    limit = Environment.from_command_line({ 'COMPOSE_PARALLEL_LIMIT' : None })['COMPOSE_PARALLEL_LIMIT']
+    limit = Environment.from_command_line({'COMPOSE_PARALLEL_LIMIT': None})['COMPOSE_PARALLEL_LIMIT']
     if limit:
         limit = int(limit)
     else:
