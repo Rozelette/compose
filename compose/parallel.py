@@ -27,6 +27,15 @@ log = logging.getLogger(__name__)
 
 STOP = object()
 
+def get_configured_limit():
+    limit = Environment.from_command_line({ 'COMPOSE_PARALLEL_LIMIT' : None })['COMPOSE_PARALLEL_LIMIT']
+    if limit:
+        limit = int(limit)
+    else:
+        limit = PARALLEL_LIMIT
+    return limit
+
+global_limiter = Semaphore(get_configured_limit())
 
 def parallel_execute(objects, func, get_name, msg, get_deps=None, limit=None, parent_objects=None):
     """Runs func on objects in parallel while ensuring that func is
@@ -53,10 +62,6 @@ def parallel_execute(objects, func, get_name, msg, get_deps=None, limit=None, pa
     # and avoid duplicates when parent_objects exists
     for obj in objects:
         writer.write_initial(get_name(obj))
-
-    if limit is None:
-        limit = get_configured_limit()
-    print("parallel " + str(limit))
 
     events = parallel_execute_iter(objects, func, get_deps, limit)
 
@@ -180,7 +185,7 @@ def producer(obj, func, results, limiter):
     The entry point for a producer thread which runs func on a single object.
     Places a tuple on the results queue once func has either returned or raised.
     """
-    with limiter:
+    with limiter, global_limiter:
         try:
             result = func(obj)
             results.put((obj, result, None))
@@ -312,11 +317,3 @@ def parallel_unpause(containers, options):
 
 def parallel_kill(containers, options):
     parallel_operation(containers, 'kill', options, 'Killing')
-
-def get_configured_limit():
-    limit = Environment.from_command_line({ 'COMPOSE_PARALLEL_LIMIT' : None })['COMPOSE_PARALLEL_LIMIT']
-    if limit:
-        limit = int(limit)
-    else:
-        limit = PARALLEL_LIMIT
-    return limit
