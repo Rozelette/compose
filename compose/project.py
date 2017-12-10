@@ -449,11 +449,11 @@ class Project(object):
 
         for svc in services:
             svc.ensure_image_exists(do_build=do_build)
+
         plans = self._get_convergence_plans(services, strategy)
         scaled_services = self.get_scaled_services(services, scale_override)
 
         def do(service):
-
             return service.execute_convergence_plan(
                 plans[service.name],
                 timeout=timeout,

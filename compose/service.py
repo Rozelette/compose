@@ -253,7 +253,7 @@ class Service(object):
                     c for c in stopped_containers if self._containers_have_diverged([c])
                 ]
                 for c in divergent_containers:
-                        c.remove()
+                    c.remove()
 
                 all_containers = list(set(all_containers) - set(divergent_containers))
 
@@ -783,12 +783,15 @@ class Service(object):
             self.options.get('labels'),
             override_options.get('labels'))
 
-        binds, affinity = merge_volume_bindings(
-            container_options.get('volumes') or [],
-            self.options.get('tmpfs') or [],
-            previous_container)
-        override_options['binds'] = binds
-        container_options['environment'].update(affinity)
+        # Per https://github.com/docker/compose/issues/4337, this yields
+        # incorrect behavior by always using old volumes for dependencies.
+
+        # binds, affinity = merge_volume_bindings(
+        #     container_options.get('volumes') or [],
+        #     self.options.get('tmpfs') or [],
+        #     previous_container)
+        # override_options['binds'] = binds
+        # container_options['environment'].update(affinity)
 
         container_options['volumes'] = dict(
             (v.internal, {}) for v in container_options.get('volumes') or {})
@@ -1249,6 +1252,7 @@ def merge_volume_bindings(volumes, tmpfs, previous_container):
     if previous_container:
         old_volumes = get_container_data_volumes(previous_container, volumes, tmpfs)
         warn_on_masked_volume(volumes, old_volumes, previous_container.service)
+
         volume_bindings.update(
             build_volume_binding(volume) for volume in old_volumes)
 
@@ -1270,11 +1274,14 @@ def get_container_data_volumes(container, volumes_option, tmpfs_option):
         for mount in container.get('Mounts') or {}
     )
 
-    image_volumes = [
-        VolumeSpec.parse(volume)
-        for volume in
-        container.image_config['ContainerConfig'].get('Volumes') or {}
-    ]
+    try:
+        image_volumes = [
+            VolumeSpec.parse(volume)
+            for volume in
+            container.image_config['ContainerConfig'].get('Volumes') or {}
+        ]
+    except ImageNotFound:
+        return volumes
 
     for volume in set(volumes_option + image_volumes):
         # No need to preserve host volumes
